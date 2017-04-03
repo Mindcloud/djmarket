@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.text import slugify
 
 from .models import Product
 
@@ -49,18 +50,27 @@ class ProductModelForm(forms.ModelForm):
         ]
         widgets = {
             "description": forms.Textarea(
-
+                attrs= {
+                    "placeholder": "New Description"
+                }
+            ),
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": "Title"
+                }
             )
         }
 
     publish = forms.ChoiceField(widget=forms.RadioSelect, choices=PUBLISH_CHOICES, required=False)
 
-    # description = forms.CharField(widget=forms.Textarea(
-    #     attrs={
-    #         "class": "my-custom-class",
-    #         "placeholder": "description"
-    #     }
-    # ))
+    def clean(self, *args, **kwargs):
+        cleaned_data = super(ProductModelForm, self).clean(*args, **kwargs)
+        #title = cleaned_data.get('title')
+        #slug = slugify(title)
+        # qs = Product.objects.filter(slug=slug).exists()
+        # if qs:
+        #    raise forms.ValidationError("Title already exists.")
+        return cleaned_data
 
     def clean_price(self):
         price = self.cleaned_data.get('price')

@@ -13,10 +13,10 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import url
+from django.conf import settings
+from django.conf.urls import include, url
+from django.conf.urls.static import static
 from django.contrib import admin
-
-from products.views import ProductListView
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -24,5 +24,9 @@ urlpatterns = [
     url(r'^detail/(?P<object_id>\d+)/edit/$', 'products.views.update_view', name='update_view'),
     url(r'^detail/(?P<object_id>\d+)/$', 'products.views.detail_view', name='detail_view'),
     url(r'^detail/(?P<slug>[\w-]+)/$', 'products.views.detail_slug_view', name='detail_slug_view'),
-    url(r'^products/list/$', ProductListView.as_view(), name='product_list_view')
+    url(r'^products/', include("products.urls", namespace='products')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
