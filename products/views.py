@@ -1,10 +1,16 @@
+import os
+
+from mimetypes import guess_type
+
+from django.conf import settings
+from django.core.servers.basehttp import FileWrapper
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, get_object_or_404
 from django.views.generic.edit import CreateView
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from django.views.generic.edit import UpdateView
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 from digitalmarket.mixins import (
     LoginRequiredMixin,
@@ -46,6 +52,27 @@ class ProductUpdateView(ProductManagerMixin, SubmitBtnMixin, MultiSlugMixin, Upd
 
 class ProductDetailView(MultiSlugMixin, DetailView):
     model = Product
+
+
+class ProductDownloadView(MultiSlugMixin, DetailView):
+    model = Product
+
+    def get(self, request, *args, **kwargs):
+        obj = self.get_object()
+        filepath = os.path.join(settings.PROTECTED_ROOT, obj.media.path)
+        guessed_type = guess_type(filepath)[0]
+        wrapper = FileWrapper(file(filepath))
+
+        mimetype = 'application/force-download'
+        if guessed_type:
+            mimetype = guessed_type
+        response = HttpResponse(wrapper, content_type=mimetype)
+
+        if not request.GET.get('preview'):
+            response["Content-Disposition"] = "attachment; filename=%s" %(obj.media.name)
+
+        response["X-SendFile"] = str(obj.media.name)
+        return response
 
 
 class ProductListView(ListView):
