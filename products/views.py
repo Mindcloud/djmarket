@@ -5,6 +5,7 @@ from mimetypes import guess_type
 from django.conf import settings
 from django.core.servers.basehttp import FileWrapper
 from django.core.urlresolvers import reverse
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.views.generic.edit import CreateView
 from django.views.generic.detail import DetailView
@@ -59,27 +60,33 @@ class ProductDownloadView(MultiSlugMixin, DetailView):
 
     def get(self, request, *args, **kwargs):
         obj = self.get_object()
-        filepath = os.path.join(settings.PROTECTED_ROOT, obj.media.path)
-        guessed_type = guess_type(filepath)[0]
-        wrapper = FileWrapper(file(filepath))
 
-        mimetype = 'application/force-download'
-        if guessed_type:
-            mimetype = guessed_type
-        response = HttpResponse(wrapper, content_type=mimetype)
+        if obj in request.user.myproducts.products.all():
+            filepath = os.path.join(settings.PROTECTED_ROOT, obj.media.path)
+            guessed_type = guess_type(filepath)[0]
+            wrapper = FileWrapper(file(filepath))
 
-        if not request.GET.get('preview'):
-            response["Content-Disposition"] = "attachment; filename=%s" %(obj.media.name)
+            mimetype = 'application/force-download'
+            if guessed_type:
+                mimetype = guessed_type
+            response = HttpResponse(wrapper, content_type=mimetype)
 
-        response["X-SendFile"] = str(obj.media.name)
-        return response
+            if not request.GET.get('preview'):
+                response["Content-Disposition"] = "attachment; filename=%s" %(obj.media.name)
+
+            response["X-SendFile"] = str(obj.media.name)
+            return response
+        else:
+            raise Http404
 
 
 class ProductListView(ListView):
     model = Product
 
     def get_queryset(self, *args, **kwargs):
-        qs = super(ProductListView, self).get_queryset(**kwargs)
+        qs = super(ProductListView, self).get_queryset()
+        query = self.request.GET.get("q", "")
+        qs = qs.filter(Q(title__icontains=query)|Q(description__icontains=query)).order_by("-title")
         # qs = qs.filter(title__icontains="asdfasdf")
         return qs
 
